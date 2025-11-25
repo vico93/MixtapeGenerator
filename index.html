@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criador de Mixtape</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Header e Controles Globais */
+        .main-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin: 0;
+        }
+
+        .btn-reset {
+            background-color: #a31515;
+            color: white;
+            font-size: 12px;
+        }
+        .btn-reset:hover { background-color: #800e0e; }
+
+        .album-header {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .album-info {
+            flex: 1;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        /* Upload de Capa */
+        .cover-upload {
+            width: 250px;
+            height: 250px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            background: #fafafa;
+            transition: border-color 0.2s;
+        }
+
+        .cover-upload:hover {
+            border-color: #999;
+        }
+
+        .cover-upload input[type="file"] {
+            display: none;
+        }
+
+        .cover-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .cover-placeholder {
+            text-align: center;
+            color: #999;
+        }
+
+        /* Discos */
+        .disc-section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .disc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .disc-header h2 {
+            color: #333;
+            font-size: 18px;
+        }
+
+        .disc-duration {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .duration-display {
+            padding: 8px 16px;
+            background: #e8f5e9;
+            border-radius: 4px;
+            font-weight: bold;
+            color: #2e7d32;
+            font-size: 14px;
+        }
+
+        .duration-display.warning { background: #fff3e0; color: #ef6c00; }
+        .duration-display.error { background: #ffebee; color: #c62828; }
+
+        /* Lista de Faixas */
+        .tracks-container {
+            min-height: 50px; /* Área de drop mínima */
+        }
+
+        .track-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+            background: #fff; /* Fundo branco pra destacar ao arrastar */
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid transparent;
+        }
+
+        /* Estilo quando está arrastando */
+        .sortable-ghost {
+            opacity: 0.4;
+            background: #e0e0e0;
+            border: 1px dashed #999;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            color: #aaa;
+            padding: 0 5px;
+            font-size: 18px;
+            user-select: none;
+        }
+        .drag-handle:hover { color: #555; }
+        .drag-handle:active { cursor: grabbing; }
+
+        .track-row input {
+            flex: 1;
+        }
+
+        .track-row input:first-of-type { /* Título */
+            flex: 2;
+        }
+
+        .track-row .length-input {
+            flex: 0 0 80px;
+        }
+
+        /* Botões */
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn-add { background-color: #4CAF50; color: white; }
+        .btn-add:hover { background-color: #45a049; }
+
+        .btn-remove { background-color: #f44336; color: white; padding: 8px 12px; }
+        .btn-remove:hover { background-color: #da190b; }
+
+        .btn-disc { background-color: #2196F3; color: white; margin-top: 10px; }
+        .btn-disc:hover { background-color: #0b7dda; }
+
+        .btn-load { background-color: #2196F3; color: white; padding: 12px 24px; font-size: 16px; }
+        .btn-load:hover { background-color: #0b7dda; }
+
+        .btn-generate { background-color: #FF9800; color: white; padding: 12px 24px; font-size: 16px; margin-top: 20px; }
+        .btn-generate:hover { background-color: #e68900; }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            align-items: center;
+        }
+
+        .btn-youtube { background-color: #ddd; color: #555; padding: 8px 12px; min-width: 36px; }
+        .btn-youtube:hover { background-color: #ccc; }
+        .btn-youtube.has-link { background-color: #4CAF50; color: white; }
+        .btn-youtube.has-link:hover { background-color: #45a049; }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show { display: flex; }
+
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .modal-header { margin-bottom: 20px; }
+        .modal-body { margin-bottom: 20px; }
+        .modal-body input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+        
+        .btn-modal-cancel { background-color: #999; color: white; }
+        .btn-modal-save { background-color: #2196F3; color: white; }
+        .btn-modal-clear { background-color: #f44336; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-header">
+            <h1>🎵 Criador de Mixtape</h1>
+            <button class="btn-reset" id="resetAllBtn" title="Limpa todo o progresso salvo">🗑️ Limpar Tudo</button>
+        </div>
+        
+        <div class="album-header">
+            <div class="album-info">
+                <div class="form-group">
+                    <label for="albumTitle">Título do Álbum</label>
+                    <input type="text" id="albumTitle" placeholder="Ex: Grandes Sucessos" oninput="autoSave()">
+                </div>
+                
+                <div class="form-group">
+                    <label for="albumArtist">Artista do Álbum</label>
+                    <input type="text" id="albumArtist" placeholder="Ex: Various Artists" oninput="autoSave()">
+                </div>
+                
+                <div class="form-group">
+                    <label for="albumYear">Ano</label>
+                    <input type="number" id="albumYear" placeholder="Ex: 2024" oninput="autoSave()">
+                </div>
+            </div>
+            
+            <div class="cover-upload" id="coverUpload">
+                <input type="file" id="coverFile" accept="image/*">
+                <div class="cover-placeholder" id="coverPlaceholder">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📷</div>
+                    <div>CAPA</div>
+                    <div style="font-size: 12px; margin-top: 5px;">Clique para selecionar</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="discsContainer"></div>
+
+        <button class="btn-disc" id="addDiscBtn">+ Adicionar Disco</button>
+
+        <div class="actions">
+            <button class="btn-generate" id="generateBtn">Gerar JSON</button>
+            <button class="btn-load" id="loadBtn">Abrir JSON</button>
+            <input type="file" id="loadFile" accept=".json" style="display: none;">
+        </div>
+    </div>
+
+    <div id="youtubeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🎬 Link do YouTube</h3>
+            </div>
+            <div class="modal-body">
+                <label for="youtubeLink">Cole o link do YouTube desta música:</label>
+                <input type="text" id="youtubeLink" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
+            <div class="modal-footer">
+                <button class="btn-modal btn-modal-clear" id="clearLinkBtn">Limpar</button>
+                <button class="btn-modal btn-modal-cancel" id="cancelModalBtn">Cancelar</button>
+                <button class="btn-modal btn-modal-save" id="saveLinkBtn">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let discCount = 0;
+        let coverBase64 = '';
+        let coverExtension = '';
+        let currentTrackRow = null;
+        let isAutoLoading = false; // Flag para evitar salvamento enquanto carrega
+
+        // Inicializar
+        window.onload = function() {
+            // Tentar carregar do LocalStorage primeiro
+            const savedData = localStorage.getItem('mixtapeData');
+            if (savedData) {
+                try {
+                    console.log("📥 Carregando backup local...");
+                    isAutoLoading = true;
+                    const data = JSON.parse(savedData);
+                    loadFromJSON(data);
+                    isAutoLoading = false;
+                } catch (e) {
+                    console.error("Erro ao carregar backup:", e);
+                    // Se falhar, inicia do zero
+                    addDisc();
+                }
+            } else {
+                addDisc();
+            }
+        };
+
+        // --- SISTEMA DE AUTO-SAVE (LocalStorage) ---
+
+        function getDataObject() {
+            // Função auxiliar que extrai os dados atuais da DOM
+            // Usada tanto pelo Generate JSON quanto pelo AutoSave
+            const albumTitle = document.getElementById('albumTitle').value;
+            const albumArtist = document.getElementById('albumArtist').value;
+            const albumYear = document.getElementById('albumYear').value;
+            
+            const discs = [];
+            const discSections = document.querySelectorAll('.disc-section');
+            
+            discSections.forEach(function(discSection) {
+                const tracks = [];
+                const trackRows = discSection.querySelectorAll('.track-row');
+                
+                trackRows.forEach(function(row) {
+                    const title = row.querySelector('.track-title').value;
+                    const artist = row.querySelector('.track-artist').value;
+                    const length = row.querySelector('.track-length').value;
+                    const youtubeLink = row.getAttribute('data-youtube-link') || '';
+                    
+                    // Salva mesmo se estiver vazio para manter o estado dos inputs no reload
+                    tracks.push({
+                        title: title || '',
+                        artist: artist || '',
+                        length: length || '',
+                        youtube_link: youtubeLink
+                    });
+                });
+                discs.push(tracks);
+            });
+
+            return {
+                album_title: albumTitle,
+                album_artist: albumArtist,
+                album_year: albumYear,
+                album_art: {
+                    base64: coverBase64 || '',
+                    extension: coverExtension || 'png'
+                },
+                album_discs: discs
+            };
+        }
+
+        function autoSave() {
+            if (isAutoLoading) return;
+            const data = getDataObject();
+            localStorage.setItem('mixtapeData', JSON.stringify(data));
+            // console.log("💾 Estado salvo");
+        }
+
+        document.getElementById('resetAllBtn').addEventListener('click', function() {
+            if(confirm("Tem certeza? Isso apagará todo o progresso atual.")) {
+                localStorage.removeItem('mixtapeData');
+                location.reload();
+            }
+        });
+
+
+        // --- UPLOAD CAPA ---
+        document.getElementById('coverUpload').addEventListener('click', function() {
+            document.getElementById('coverFile').click();
+        });
+
+        document.getElementById('coverFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                coverExtension = file.name.split('.').pop().toLowerCase();
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    coverBase64 = e.target.result;
+                    document.getElementById('coverPlaceholder').innerHTML = 
+                        '<img src="' + e.target.result + '" class="cover-preview" alt="Capa">';
+                    autoSave(); // Salvar após mudar capa
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // --- CONTROLES PRINCIPAIS ---
+        document.getElementById('addDiscBtn').addEventListener('click', () => {
+            addDisc();
+            autoSave();
+        });
+
+        document.getElementById('generateBtn').addEventListener('click', generateJSON);
+        
+        document.getElementById('loadBtn').addEventListener('click', function() {
+            document.getElementById('loadFile').click();
+        });
+
+        document.getElementById('loadFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        loadFromJSON(data);
+                        autoSave(); // Salvar após carregar arquivo
+                        alert('JSON carregado com sucesso!');
+                    } catch (error) {
+                        alert('Erro ao carregar JSON: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+            e.target.value = '';
+        });
+
+        // --- LÓGICA DE DISCOS E FAIXAS ---
+
+        function addDisc() {
+            discCount++;
+            const discsContainer = document.getElementById('discsContainer');
+            
+            const discDiv = document.createElement('div');
+            discDiv.className = 'disc-section';
+            discDiv.id = 'disc-' + discCount;
+            
+            const discHeader = document.createElement('div');
+            discHeader.className = 'disc-header';
+            
+            const title = document.createElement('h2');
+            title.textContent = 'Disco ' + discCount;
+            
+            const durationDiv = document.createElement('div');
+            durationDiv.className = 'disc-duration';
+            
+            const durationDisplay = document.createElement('div');
+            durationDisplay.className = 'duration-display';
+            durationDisplay.id = 'duration-' + discCount;
+            durationDisplay.textContent = '⏱️ 00:00 / 74:00';
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn-remove';
+            removeBtn.textContent = 'Remover Disco';
+            removeBtn.onclick = function() { 
+                removeDisc(discDiv.id); 
+            };
+            
+            durationDiv.appendChild(durationDisplay);
+            durationDiv.appendChild(removeBtn);
+            
+            discHeader.appendChild(title);
+            discHeader.appendChild(durationDiv);
+            
+            const tracksContainer = document.createElement('div');
+            tracksContainer.className = 'tracks-container'; // Classe para o Sortable
+            tracksContainer.id = 'tracks-' + discCount;
+            
+            // Inicializar SortableJS neste container
+            new Sortable(tracksContainer, {
+                group: 'discs', // Permite arrastar entre discos!
+                handle: '.drag-handle', // Só arrasta pelo ícone
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                onEnd: function (evt) {
+                    // Atualiza duração de ambos os discos afetados (origem e destino)
+                    // O evt.from e evt.to são os elementos DOM das listas
+                    const fromDiscId = evt.from.id.split('-')[1];
+                    const toDiscId = evt.to.id.split('-')[1];
+                    
+                    updateDiscDuration(fromDiscId);
+                    if (fromDiscId !== toDiscId) {
+                        updateDiscDuration(toDiscId);
+                    }
+                    autoSave(); // Salvar após reordenar
+                }
+            });
+
+            const addTrackBtn = document.createElement('button');
+            addTrackBtn.className = 'btn-add';
+            addTrackBtn.textContent = '+ Adicionar Faixa';
+            addTrackBtn.onclick = function() { 
+                addTrack(discCount); 
+                autoSave();
+            };
+            
+            discDiv.appendChild(discHeader);
+            discDiv.appendChild(tracksContainer);
+            discDiv.appendChild(addTrackBtn);
+            
+            discsContainer.appendChild(discDiv);
+            
+            // Adicionar 1 faixa inicial se não estiver carregando (autoLoading cuida disso)
+            if (!isAutoLoading) {
+                for (let i = 0; i < 4; i++) {
+                    addTrack(discCount);
+                }
+            }
+        }
+
+        function removeDisc(elementId) {
+            if (document.querySelectorAll('.disc-section').length > 1) {
+                document.getElementById(elementId).remove();
+                autoSave();
+                // Renumera os discos visualmente (opcional, mas bom pra UX)
+                document.querySelectorAll('.disc-section h2').forEach((h2, index) => {
+                    h2.textContent = 'Disco ' + (index + 1);
+                });
+            } else {
+                alert('Você precisa ter pelo menos um disco!');
+            }
+        }
+
+        function addTrack(discId, data = null) {
+            const tracksContainer = document.getElementById('tracks-' + discId);
+            if (!tracksContainer) return; // Segurança caso disco tenha sido deletado
+            
+            const trackRow = document.createElement('div');
+            trackRow.className = 'track-row';
+            trackRow.setAttribute('data-youtube-link', data ? (data.youtube_link || '') : '');
+            
+            // Drag Handle
+            const dragHandle = document.createElement('div');
+            dragHandle.className = 'drag-handle';
+            dragHandle.innerHTML = '☰';
+            dragHandle.title = 'Arraste para mover';
+
+            const titleInput = document.createElement('input');
+            titleInput.type = 'text';
+            titleInput.placeholder = 'Título da música';
+            titleInput.className = 'track-title';
+            if(data) titleInput.value = data.title;
+            titleInput.oninput = autoSave;
+            
+            const artistInput = document.createElement('input');
+            artistInput.type = 'text';
+            artistInput.placeholder = 'Artista';
+            artistInput.className = 'track-artist';
+            if(data) artistInput.value = data.artist;
+            artistInput.oninput = autoSave;
+            
+            const lengthInput = document.createElement('input');
+            lengthInput.type = 'text';
+            lengthInput.placeholder = '3:50';
+            lengthInput.className = 'track-length length-input';
+            if(data) lengthInput.value = data.length;
+            
+            lengthInput.addEventListener('input', function() {
+                updateDiscDuration(discId);
+                autoSave();
+            });
+            
+            const youtubeBtn = document.createElement('button');
+            youtubeBtn.className = 'btn-youtube';
+            if (data && data.youtube_link) {
+                youtubeBtn.classList.add('has-link');
+                youtubeBtn.title = 'Link do YouTube (configurado)';
+            } else {
+                youtubeBtn.title = 'Link do YouTube';
+            }
+            youtubeBtn.textContent = '▶';
+            youtubeBtn.addEventListener('click', function() {
+                openYouTubeModal(trackRow);
+            });
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn-remove';
+            removeBtn.textContent = '×';
+            removeBtn.addEventListener('click', function() {
+                trackRow.remove();
+                updateDiscDuration(discId);
+                autoSave();
+            });
+            
+            trackRow.appendChild(dragHandle);
+            trackRow.appendChild(titleInput);
+            trackRow.appendChild(artistInput);
+            trackRow.appendChild(lengthInput);
+            trackRow.appendChild(youtubeBtn);
+            trackRow.appendChild(removeBtn);
+            
+            tracksContainer.appendChild(trackRow);
+            updateDiscDuration(discId);
+        }
+
+        // --- CÁLCULO DE TEMPO ---
+
+        function timeToSeconds(timeStr) {
+            if (!timeStr || timeStr.trim() === '') return 0;
+            const parts = timeStr.split(':');
+            if (parts.length === 2) {
+                const minutes = parseInt(parts[0]) || 0;
+                const seconds = parseInt(parts[1]) || 0;
+                return minutes * 60 + seconds;
+            }
+            return 0;
+        }
+
+        function secondsToTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        }
+
+        function updateDiscDuration(discId) {
+            // O ID passado pode ser numérico (count) ou string ("disc-1"), ajusta aqui
+            // Se vier do Sortable, precisamos achar o elemento DOM correto
+            let containerId = 'tracks-' + discId;
+            let displayId = 'duration-' + discId;
+
+            // Tentativa de achar o display dentro da section se o ID estiver confuso
+            const tracksContainer = document.getElementById(containerId);
+            if (!tracksContainer) return; // Elemento não existe mais
+
+            // Encontrar o display associado a este container
+            const discSection = tracksContainer.closest('.disc-section');
+            const durationDisplay = discSection.querySelector('.duration-display');
+
+            const trackRows = tracksContainer.querySelectorAll('.track-row');
+            let totalSeconds = 0;
+            
+            trackRows.forEach(function(row) {
+                const lengthInput = row.querySelector('.track-length');
+                if (lengthInput) {
+                    totalSeconds += timeToSeconds(lengthInput.value);
+                }
+            });
+            
+            if (durationDisplay) {
+                const timeStr = secondsToTime(totalSeconds);
+                durationDisplay.textContent = '⏱️ ' + timeStr + ' / 74:00';
+                durationDisplay.classList.remove('warning', 'error');
+                
+                if (totalSeconds > 4440) { // 74 min
+                    durationDisplay.classList.add('error');
+                } else if (totalSeconds > 4200) { // 70 min
+                    durationDisplay.classList.add('warning');
+                }
+            }
+        }
+
+        // --- MODAL YOUTUBE ---
+        function openYouTubeModal(trackRow) {
+            currentTrackRow = trackRow;
+            const modal = document.getElementById('youtubeModal');
+            const input = document.getElementById('youtubeLink');
+            input.value = trackRow.getAttribute('data-youtube-link') || '';
+            modal.classList.add('show');
+            input.focus();
+        }
+
+        function closeModal() {
+            document.getElementById('youtubeModal').classList.remove('show');
+            currentTrackRow = null;
+        }
+
+        function saveYouTubeLink() {
+            if (!currentTrackRow) return;
+            const link = document.getElementById('youtubeLink').value.trim();
+            currentTrackRow.setAttribute('data-youtube-link', link);
+            
+            const youtubeBtn = currentTrackRow.querySelector('.btn-youtube');
+            if (link) {
+                youtubeBtn.classList.add('has-link');
+                youtubeBtn.title = 'Link do YouTube (configurado)';
+            } else {
+                youtubeBtn.classList.remove('has-link');
+                youtubeBtn.title = 'Link do YouTube';
+            }
+            autoSave();
+            closeModal();
+        }
+
+        document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
+        document.getElementById('saveLinkBtn').addEventListener('click', saveYouTubeLink);
+        document.getElementById('clearLinkBtn').addEventListener('click', function() {
+            document.getElementById('youtubeLink').value = '';
+        });
+        
+        // --- GERAR E CARREGAR ---
+
+        function generateJSON() {
+            // Filtra faixas vazias antes de gerar o JSON final
+            const rawData = getDataObject();
+            
+            // Limpeza: remove faixas sem título E sem artista
+            rawData.album_discs = rawData.album_discs.map(disc => {
+                return disc.filter(track => track.title.trim() !== '' || track.artist.trim() !== '');
+            }).filter(disc => disc.length > 0); // Remove discos vazios
+
+            if (rawData.album_discs.length === 0) {
+                alert("O álbum está vazio! Adicione algumas faixas antes de gerar.");
+                return;
+            }
+
+            const jsonStr = JSON.stringify(rawData, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            
+            const filenameTitle = rawData.album_title 
+                ? rawData.album_title.replace(/[^a-z0-9]/gi, '_').toLowerCase() 
+                : 'mixtape';
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filenameTitle + '_mixtape.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function loadFromJSON(data) {
+            isAutoLoading = true; // Pausa o auto-save durante a construção da DOM
+
+            // Limpar discos existentes
+            document.getElementById('discsContainer').innerHTML = '';
+            discCount = 0;
+
+            document.getElementById('albumTitle').value = data.album_title || '';
+            document.getElementById('albumArtist').value = data.album_artist || '';
+            document.getElementById('albumYear').value = data.album_year || '';
+
+            if (data.album_art && data.album_art.base64) {
+                coverBase64 = data.album_art.base64;
+                coverExtension = data.album_art.extension || 'png';
+                document.getElementById('coverPlaceholder').innerHTML = 
+                    '<img src="' + coverBase64 + '" class="cover-preview" alt="Capa">';
+            } else {
+                coverBase64 = '';
+                document.getElementById('coverPlaceholder').innerHTML = 
+                    '<div style="font-size: 48px; margin-bottom: 10px;">📷</div><div>CAPA</div><div style="font-size: 12px; margin-top: 5px;">Clique para selecionar</div>';
+            }
+
+            if (data.album_discs && data.album_discs.length > 0) {
+                data.album_discs.forEach(function(discTracks) {
+                    addDisc(); // Cria o disco e incrementa discCount
+                    const currentDiscId = discCount;
+                    const tracksContainer = document.getElementById('tracks-' + currentDiscId);
+                    
+                    // Limpa as faixas padrão criadas pelo addDisc
+                    tracksContainer.innerHTML = ''; 
+
+                    discTracks.forEach(track => {
+                        addTrack(currentDiscId, track);
+                    });
+                });
+            } else {
+                addDisc();
+            }
+
+            isAutoLoading = false;
+        }
+    </script>
+</body>
+</html>
